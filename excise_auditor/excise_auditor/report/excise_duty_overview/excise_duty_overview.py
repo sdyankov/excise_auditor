@@ -6,9 +6,8 @@ from frappe.utils import today, getdate, get_first_day
 def _to_liters(vol_str: str) -> float:
     """Parse Item.custom_volume (strings like 250/330/500 etc).
     Heuristic:
-      - <= 5    -> treat as liters
-      - >  5    -> treat as milliliters (divide by 1000)
-    Also handles commas and stray text.
+      - <= 5  -> liters
+      - > 5   -> milliliters (divide by 1000)
     """
     if not vol_str:
         return 0.0
@@ -26,6 +25,16 @@ def execute(filters=None):
     td = filters.get("to_date")
     from_date = str(getdate(fd)) if fd else str(get_first_day(today()))
     to_date = str(getdate(td)) if td else today()
+
+    # Be defensive: check for optional custom columns
+    has_net_liters_on_sii = frappe.db.has_column("Sales Invoice Item", "net_volume_l")
+    has_abv_on_batch = frappe.db.has_column("Batch", "custom_alcohol")
+    has_excise_tariff_on_item = frappe.db.has_column("Item", "custom_excise_rate")
+
+    # Build safe expressions
+    nl_expr = "sii.net_volume_l" if has_net_liters_on_sii else "0"
+    abv_expr = "b.custom_alcohol" if has_abv_on_batch else "NULL"
+    tariff_expr = "it.custom_excise_rate" if has_excise_tariff_on_item else "NULL"
 
     columns = [
         {"label": "Date", "fieldname": "posting_date", "fieldtype": "Date", "width": 95},
@@ -46,29 +55,20 @@ def execute(filters=None):
         {"label": "Status", "fieldname": "status", "fieldtype": "Data", "width": 90},
     ]
 
-    # Pull data: Sales Invoice + Items + Item master + Batch (for ABV)
-    sql = """
+    sql = f"""
         SELECT
             si.posting_date,
             si.name AS invoice,
             si.customer_name,
             sii.item_code, sii.item_name, sii.qty, sii.uom,
 
-            -- ABV from Batch if available (adjust fieldname if needed)
-            COALESCE(b.custom_alcohol, NULL) AS abv,
+            COALESCE({abv_expr}, NULL) AS abv,
+            COALESCE({nl_expr}, 0) AS net_volume_l,
 
-            -- keep if you already store net liters on SII (else it will be 0)
-            COALESCE(sii.net_volume_l, 0) AS net_volume_l,
-
-            -- raw volume from Item (e.g., 250/330/500 ml)
             it.custom_volume        AS custom_volume_raw,
+            {tariff_expr}           AS excise_tariff,
 
-            -- Excise tariff from Item
-            it.custom_excise_rate   AS excise_tariff,
-
-            sii.base_net_amount,
-            sii.warehouse,
-            si.status
+            sii.base_net_amount, sii.warehouse, si.status
         FROM `tabSales Invoice Item` AS sii
         INNER JOIN `tabSales Invoice` AS si ON si.name = sii.parent
         LEFT JOIN `tabItem` it  ON it.name = sii.item_code
@@ -80,7 +80,7 @@ def execute(filters=None):
 
     rows = frappe.db.sql(sql, {"from": from_date, "to": to_date}, as_dict=True)
 
-    # Compute Gross Liters from Item.custom_volume * qty
+    # Compute Gross Liters from custom_volume (ml per unit) * qty
     for r in rows:
         liters_per_unit = _to_liters(r.get("custom_volume_raw"))
         r["gross_liters"] = round((r.get("qty") or 0) * liters_per_unit, 3)
