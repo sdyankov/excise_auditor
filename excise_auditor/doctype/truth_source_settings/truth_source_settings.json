@@ -1,0 +1,73 @@
+{
+  "doctype": "DocType",
+  "name": "Truth Source Settings",
+  "module": "Excise Auditor",
+  "custom": 0,
+  "is_single": 1,
+  "editable_grid": 0,
+  "track_changes": 0,
+  "allow_import": 0,
+  "allow_rename": 0,
+  "allow_trash": 0,
+  "hide_toolbar": 0,
+  "fields": [
+    {
+      "fieldname": "section_creds",
+      "label": "Credentials",
+      "fieldtype": "Section Break",
+      "collapsible": 0
+    },
+    {
+      "fieldname": "username",
+      "label": "Username",
+      "fieldtype": "Data",
+      "reqd": 0
+    },
+    {
+      "fieldname": "password",
+      "label": "Password",
+      "fieldtype": "Password",
+      "reqd": 0
+    },
+    {
+      "fieldname": "section_sync",
+      "label": "Warehouse Mapping",
+      "fieldtype": "Section Break",
+      "collapsible": 0
+    },
+    {
+      "fieldname": "default_warehouse",
+      "label": "Default Warehouse",
+      "fieldtype": "Link",
+      "options": "Warehouse"
+    },
+    {
+      "fieldname": "limit_to_selected",
+      "label": "Limit Excise Auditors to Selected Warehouses",
+      "fieldtype": "Check",
+      "default": "1"
+    },
+    {
+      "fieldname": "warehouses",
+      "label": "Warehouses",
+      "fieldtype": "Table MultiSelect",
+      "options": "Warehouse"
+    },
+    {
+      "fieldname": "col1",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "sync_now",
+      "label": "Sync Permissions Now",
+      "fieldtype": "Button"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1
+    }
+  ]
+}
