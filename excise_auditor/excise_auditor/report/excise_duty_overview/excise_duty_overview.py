@@ -1,13 +1,10 @@
 import re
 import frappe
-from frappe.utils import today, getdate, get_first_day
-
 
 def _to_liters(vol_str: str) -> float:
-    """Parse Item.custom_volume (strings like 250/330/500 etc).
-    Heuristic:
-      - <= 5  -> liters
-      - > 5   -> milliliters (divide by 1000)
+    """Parse Item.custom_volume (250/330/500 etc).
+       <= 5  -> treated as liters
+       >  5  -> treated as milliliters(/1000)
     """
     if not vol_str:
         return 0.0
@@ -18,69 +15,54 @@ def _to_liters(vol_str: str) -> float:
     num = float(m.group(0))
     return num if num <= 5 else num / 1000.0
 
-
 def execute(filters=None):
     filters = filters or {}
-    fd = filters.get("from_date")
-    td = filters.get("to_date")
-    from_date = str(getdate(fd)) if fd else str(get_first_day(today()))
-    to_date = str(getdate(td)) if td else today()
+    wh = filters.get("warehouse")
 
-    # Be defensive: check for optional custom columns
-    has_net_liters_on_sii = frappe.db.has_column("Sales Invoice Item", "net_volume_l")
-    has_abv_on_batch = frappe.db.has_column("Batch", "custom_alcohol")
-    has_excise_tariff_on_item = frappe.db.has_column("Item", "custom_excise_rate")
+    # safe ABV fallback: Batch usually holds ABV, but Bin is warehouse+item only.
+    # If Item has a custom ABV (e.g. custom_alcohol), use that; otherwise NULL.
+    has_item_abv = frappe.db.has_column("Item", "custom_alcohol")
+    abv_expr = "it.custom_alcohol" if has_item_abv else "NULL"
 
-    # Build safe expressions
-    nl_expr = "sii.net_volume_l" if has_net_liters_on_sii else "0"
-    abv_expr = "b.custom_alcohol" if has_abv_on_batch else "NULL"
-    tariff_expr = "it.custom_excise_rate" if has_excise_tariff_on_item else "NULL"
+    has_excise_tariff = frappe.db.has_column("Item", "custom_excise_rate")
+    tariff_expr = "it.custom_excise_rate" if has_excise_tariff else "NULL"
 
     columns = [
-        {"label": "Date", "fieldname": "posting_date", "fieldtype": "Date", "width": 95},
-        {"label": "Doc No", "fieldname": "invoice", "fieldtype": "Link", "options": "Sales Invoice", "width": 130},
-        {"label": "Customer", "fieldname": "customer_name", "fieldtype": "Data", "width": 160},
-        {"label": "Item", "fieldname": "item_code", "fieldtype": "Link", "options": "Item", "width": 120},
-        {"label": "Item Name", "fieldname": "item_name", "fieldtype": "Data", "width": 150},
-        {"label": "Qty", "fieldname": "qty", "fieldtype": "Float", "width": 70},
-        {"label": "UOM", "fieldname": "uom", "fieldtype": "Link", "options": "UOM", "width": 70},
-
-        {"label": "ABV %", "fieldname": "abv", "fieldtype": "Percent", "width": 70},
-        {"label": "Net Liters", "fieldname": "net_volume_l", "fieldtype": "Float", "width": 100},
-        {"label": "Gross Liters", "fieldname": "gross_liters", "fieldtype": "Float", "width": 110},
-        {"label": "Excise Tariff", "fieldname": "excise_tariff", "fieldtype": "Currency", "width": 110},
-
-        {"label": "Net Amount", "fieldname": "base_net_amount", "fieldtype": "Currency", "width": 110},
-        {"label": "Warehouse", "fieldname": "warehouse", "fieldtype": "Link", "options": "Warehouse", "width": 120},
-        {"label": "Status", "fieldname": "status", "fieldtype": "Data", "width": 90},
+        {"label": "Item",         "fieldname": "item_code",    "fieldtype": "Link",   "options": "Item",      "width": 140},
+        {"label": "Item Name",    "fieldname": "item_name",    "fieldtype": "Data",                           "width": 180},
+        {"label": "Qty",          "fieldname": "qty",          "fieldtype": "Float",                          "width": 90},
+        {"label": "UOM",          "fieldname": "uom",          "fieldtype": "Link",   "options": "UOM",       "width": 70},
+        {"label": "ABV %",        "fieldname": "abv",          "fieldtype": "Percent","precision": 2,         "width": 70},
+        {"label": "Gross Liters", "fieldname": "gross_liters", "fieldtype": "Float",                          "width": 110},
+        {"label": "Excise Tariff","fieldname": "excise_tariff","fieldtype": "Currency","options":"Currency",  "width": 110},
+        {"label": "Warehouse",    "fieldname": "warehouse",    "fieldtype": "Link",   "options": "Warehouse", "width": 150}
     ]
+
+    wh_clause = ""
+    params = {}
+    if wh:
+        wh_clause = "AND b.warehouse = %(warehouse)s"
+        params["warehouse"] = wh
 
     sql = f"""
         SELECT
-            si.posting_date,
-            si.name AS invoice,
-            si.customer_name,
-            sii.item_code, sii.item_name, sii.qty, sii.uom,
-
-            COALESCE({abv_expr}, NULL) AS abv,
-            COALESCE({nl_expr}, 0) AS net_volume_l,
-
-            it.custom_volume        AS custom_volume_raw,
-            {tariff_expr}           AS excise_tariff,
-
-            sii.base_net_amount, sii.warehouse, si.status
-        FROM `tabSales Invoice Item` AS sii
-        INNER JOIN `tabSales Invoice` AS si ON si.name = sii.parent
-        LEFT JOIN `tabItem` it  ON it.name = sii.item_code
-        LEFT JOIN `tabBatch` b  ON b.name = sii.batch_no
-        WHERE si.docstatus = 1
-          AND si.posting_date BETWEEN %(from)s AND %(to)s
-        ORDER BY si.posting_date, si.name
+            b.item_code,
+            it.item_name,
+            b.actual_qty AS qty,
+            it.stock_uom AS uom,
+            {abv_expr} AS abv,
+            it.custom_volume AS custom_volume_raw,
+            {tariff_expr} AS excise_tariff,
+            b.warehouse
+        FROM `tabBin` b
+        LEFT JOIN `tabItem` it ON it.name = b.item_code
+        WHERE b.actual_qty > 0
+        {wh_clause}
+        ORDER BY it.item_group, b.item_code
     """
 
-    rows = frappe.db.sql(sql, {"from": from_date, "to": to_date}, as_dict=True)
+    rows = frappe.db.sql(sql, params, as_dict=True)
 
-    # Compute Gross Liters from custom_volume (ml per unit) * qty
     for r in rows:
         liters_per_unit = _to_liters(r.get("custom_volume_raw"))
         r["gross_liters"] = round((r.get("qty") or 0) * liters_per_unit, 3)
