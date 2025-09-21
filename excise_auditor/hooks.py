@@ -43,7 +43,10 @@ app_license = "mit"
 # page_js = {"page" : "public/js/file.js"}
 
 # include js in doctype views
-# doctype_js = {"doctype" : "public/js/doctype.js"}
+doctype_js = {
+    # Attach a tiny client script to Truth Source Settings (for test button / hints)
+    "Truth Source Settings": "public/js/truth_source_settings.js",
+}
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
@@ -148,23 +151,17 @@ app_license = "mit"
 # Scheduled Tasks
 # ---------------
 
-# scheduler_events = {
-# 	"all": [
-# 		"excise_auditor.tasks.all"
-# 	],
-# 	"daily": [
-# 		"excise_auditor.tasks.daily"
-# 	],
-# 	"hourly": [
-# 		"excise_auditor.tasks.hourly"
-# 	],
-# 	"weekly": [
-# 		"excise_auditor.tasks.weekly"
-# 	],
-# 	"monthly": [
-# 		"excise_auditor.tasks.monthly"
-# 	],
-# }
+scheduler_events = {
+    # run the Warehouse Permission sync once a day
+    "daily": [
+        "excise_auditor.excise_auditor.doctype.truth_source_settings.truth_source_settings._sync_permissions"
+    ],
+    # If you add more schedules later, keep them here
+    # "all": [],
+    # "hourly": [],
+    # "weekly": [],
+    # "monthly": [],
+}
 
 # Testing
 # -------
@@ -241,4 +238,3 @@ app_license = "mit"
 # default_log_clearing_doctypes = {
 # 	"Logging DocType Name": 30  # days to retain logs
 # }
-
