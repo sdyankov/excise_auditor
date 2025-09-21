@@ -3,14 +3,19 @@
   "add_total_row": 1,
   "disabled": 0,
   "filters": [
-    { "fieldname": "from_date", "label": "From Date", "fieldtype": "Date", "reqd": 0 },
-    { "fieldname": "to_date",   "label": "To Date",   "fieldtype": "Date", "reqd": 0 }
+    {
+      "fieldname": "warehouse",
+      "label": "Warehouse",
+      "fieldtype": "Link",
+      "options": "Warehouse",
+      "reqd": 0
+    }
   ],
   "is_standard": "Yes",
   "module": "Excise Auditor",
   "name": "Excise Duty Overview",
   "prepared_report": 0,
-  "ref_doctype": "Sales Invoice",
+  "ref_doctype": "Bin",
   "report_name": "Excise Duty Overview",
   "report_type": "Script Report",
   "roles": [
