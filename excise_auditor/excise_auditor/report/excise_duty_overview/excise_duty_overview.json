@@ -15,7 +15,7 @@
   "module": "Excise Auditor",
   "name": "Excise Duty Overview",
   "prepared_report": 0,
-  "ref_doctype": "Bin",
+  "ref_doctype": "Warehouse",
   "report_name": "Excise Duty Overview",
   "report_type": "Script Report",
   "roles": [
