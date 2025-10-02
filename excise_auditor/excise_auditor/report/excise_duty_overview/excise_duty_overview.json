@@ -2,15 +2,15 @@
   "doctype": "Report",
   "add_total_row": 1,
   "disabled": 0,
-  "filters": [
-    {
-      "fieldname": "warehouse",
-      "label": "Warehouse",
-      "fieldtype": "Link",
-      "options": "Warehouse",
-      "reqd": 0
-    }
-  ],
+"filters": [
+  {
+    "fieldname": "warehouse",
+    "label": "Warehouse",
+    "fieldtype": "Data",
+    "reqd": 0
+  }
+]
+,
   "is_standard": "Yes",
   "module": "Excise Auditor",
   "name": "Excise Duty Overview",
