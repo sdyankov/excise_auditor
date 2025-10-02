@@ -7,15 +7,7 @@ app_license = "mit"
 
 # Apps
 # Each item in the list will be shown as an app in the apps page
-add_to_apps_screen = [
-    {
-        "name": "excise_auditor",   # internal key (keep this)
-        "title": "Excise Auditor",
-        # Directly open the main report:
-        "route": "/app/query-report/Excise%20Duty%20Overview",
-        "has_permission": "excise_auditor.api.permission.has_app_permission",
-    }
-]
+
 
 # ------------------
 
