@@ -31,7 +31,7 @@ app_license = "mit"
 # app_include_css = "/assets/excise_auditor/css/excise_auditor.css"
 # app_include_js = "/assets/excise_auditor/js/excise_auditor.js"
 app_include_css = ["assets/excise_auditor/css/print-strip.css"]
-
+app_include_js = ["/assets/excise_auditor/js/print-strip.js"]
 # include js, css files in header of web template
 # web_include_css = "/assets/excise_auditor/css/excise_auditor.css"
 # web_include_js = "/assets/excise_auditor/js/excise_auditor.js"
