@@ -1,3 +1,7 @@
-body[data-route*="/print"] .page-actions .custom-actions {
+/* ERPNext Print Preview – скрий всички алтернативни действия, да остане само черният Print */
+body[data-route^="print"] .page-head .page-actions .custom-actions,
+body[data-route^="print"] .page-actions .custom-actions,
+body.route-print        .page-actions .custom-actions,
+body[data-page-route^="print"] .page-actions .custom-actions {
   display: none !important;
 }
