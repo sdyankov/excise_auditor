@@ -1,0 +1,6 @@
+/* Скрива алтернативните бутони в print preview */
+body[data-route*="/print"] .page-actions [data-label="PDF"],
+body[data-route*="/print"] .page-actions [data-label="Full%20Page"],
+body[data-route*="/print"] .page-actions [data-label="Try%20the%20new%20Print%20Designer"] {
+  display: none !important;
+}
