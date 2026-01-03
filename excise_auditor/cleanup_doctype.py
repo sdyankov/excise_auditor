@@ -13,14 +13,35 @@ import frappe
 
 
 def cleanup():
-    """Remove old Truth Source Settings DocType and related data"""
+    """Remove old Truth Source Settings DocType, Pages, and related data from previous installation"""
 
     doctype_name = "Truth Source Settings"
 
     try:
+        # First, remove any Page documents from excise_auditor module
+        # This prevents the "Not in Developer Mode" error during migration
+        print("🔍 Checking for leftover Page documents from previous installation...")
+        pages = frappe.db.sql("""
+            SELECT name FROM `tabPage`
+            WHERE module = 'Excise Auditor'
+        """, as_dict=True)
+
+        if pages:
+            for page in pages:
+                print(f"🗑️  Removing Page: {page.name}")
+                frappe.db.sql("DELETE FROM `tabPage` WHERE name = %s", (page.name,))
+            print(f"✅ Removed {len(pages)} Page document(s)")
+        else:
+            print("ℹ️  No Page documents found")
+
         # Check if DocType exists
         if not frappe.db.exists("DocType", doctype_name):
-            print(f"ℹ️  {doctype_name} DocType not found - nothing to clean up")
+            print(f"ℹ️  {doctype_name} DocType not found - skipping DocType cleanup")
+            if pages:
+                # Commit if we removed pages
+                frappe.db.commit()
+                print(f"\n✅ Cleanup complete - removed Page documents")
+                print(f"✅ You can now run: bench --site <sitename> migrate")
             return
 
         print(f"🔍 Found {doctype_name} DocType - proceeding with cleanup...")
